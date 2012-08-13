@@ -5,19 +5,20 @@
  */
 (function () {
   
-  var PingPong = {
+  var pingpong = {
     
     subscribe: function (topic, handler, context) {
       var oTopic = new Topic(topic),
         oHandler = new Handler(handler, context);
         
-      SubscribersMap.register(oTopic, oHandler); 
+      subscribersMap.register(oTopic, oHandler); 
     },
     
     publish: function (topic) {
       var oTopic = new Topic(topic),
         datas = Array.prototype.slice.call(arguments, 1);
-      SubscribersMap.runHandlers(oTopic, datas);
+        
+      subscribersMap.runHandlers(oTopic, datas);
     }
     
   };
@@ -43,7 +44,7 @@
   };
 
 
-  var SubscribersMap = {
+  var subscribersMap = {
 
     WILDCARD: '*',
     
@@ -84,7 +85,7 @@
     },
     
     /**
-     * iterate each msg map
+     * Iterate each map of message
      * @param {Object} oTopic
      * @param {function (msg, isLast, parentMap)} callback
      *    {string} msg The message block.
@@ -134,7 +135,7 @@
     runHandlers: function (oTopic, datas) {
       this._eachMsgMap(oTopic, function (msg, isLast, parentMap) {
         this._runWildcardHandlers(parentMap, datas);
-        this._runHandlersIfLastMsg(isLast, parentMap, msg, datas);  
+        this._runHandlersIfLastMsg(msg, isLast, parentMap, datas);  
       });
     },
     
@@ -148,7 +149,7 @@
       }
     },
         
-    _runHandlersIfLastMsg: function (isLast, parentMap, msg, datas) {
+    _runHandlersIfLastMsg: function (msg, isLast, parentMap, datas) {
       if ( ! isLast) { return; }
       
       var oHandlers = parentMap[msg] && parentMap[msg][this.HANDLERS_KEY];
@@ -172,7 +173,7 @@
   };
   Handlers.prototype.runAll = function (datas) {
     var len = this._handlers.length,
-      handler = null;
+      handler;
       
     for (var i = 0; i < len; i++) {
       handler = this._handlers[i];
@@ -190,8 +191,8 @@
   };
   
   
-  PingPong.SubscribersMap = SubscribersMap;
-  window.PingPong = PingPong;
+  pingpong.subscribersMap = subscribersMap;
+  window.pingpong = pingpong;
   
   
 }());

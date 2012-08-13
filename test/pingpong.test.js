@@ -1,4 +1,4 @@
-module('PingPong', {
+module('pingpong', {
   setup: function () {
     submap().reset();
   },
@@ -9,11 +9,11 @@ module('PingPong', {
 });
 
 function pp() {
-  return PingPong; 
+  return pingpong; 
 }
 
 function submap() {
-  return PingPong.SubscribersMap; 
+  return pingpong.subscribersMap; 
 }
 
 function mockFunction() {
