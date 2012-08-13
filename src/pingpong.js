@@ -5,205 +5,193 @@
  */
 (function () {
   
-  
-  var
-  
-    WILDCARD = '*',
+  var PingPong = {
     
-    SEPERATOR = '.',
-    
-    PingPong = {
-
-      /**
-       * Subscribe topic.
-       * You can seperate topics by dot(.), and subscribe all topics using wildcard(*).
-       * e.g. 'some.topic.*'
-       *
-       * @param {string} topic Topic
-       * @param {function(?Object, string)} callback(data, topic)
-       * @return {string} Subscribed callback id
-       */
-      subscribe: function (topic, callback) {
-        var callbackObj = Callback.create(callback),
-          callbackId = callbackObj.id;
-          
-        SubscribersMap.add(topic, callbackId, callbackObj);
-        return callbackId;
-      },  
-    
-      /**
-       * Unsubscribe specific callback
-       * @param {string} topic
-       * @param {string} callbackId
-       */
-      unsubscribe: function (topic, callbackId) {
-        SubscribersMap.remove(topic, callbackId);
-      },
-    
-      /**
-       * Publish topic with data
-       * @param {string} topic The topic has seperator dot('.'), and does not recommand include '*'.
-       * @param {?Object=} data
-       */
-      publish: function (topic, data) {
-        var t = this,
-          runCallback = function (currentMap) {
-            for (var callbackId in currentMap) {
-              if (currentMap.hasOwnProperty(callbackId)) {
-                 if (typeof currentMap[callbackId] === 'function') {
-                    currentMap[callbackId](data, topic); 
-                 }
-              } 
-            }
-          };
+    subscribe: function (topic, handler, context) {
+      var oTopic = new Topic(topic),
+        oHandler = new Handler(handler, context);
         
-        SubscribersMap.eachDepth(topic, function (msgName, currentMap, parentMap, isLastDepth) {
-          runCallback(parentMap[WILDCARD]);
-          
-          if (isLastDepth) {
-            runCallback(currentMap);
-          }
-        });
-      }
-      
+      SubscribersMap.register(oTopic, oHandler); 
     },
     
+    publish: function (topic) {
+      var oTopic = new Topic(topic),
+        datas = Array.prototype.slice.call(arguments, 1);
+      SubscribersMap.runHandlers(oTopic, datas);
+    }
+    
+  };
+  
+  
+  var Topic = function (topic) {
+    var SEPERATOR = '.';
+    this._topic = topic;
+    this._topicArr = topic.split(SEPERATOR);
+  };
+  Topic.prototype.eachMsg = function (callback, context) {
+    var len = this._topicArr.length,
+      msg,
+      isLast,
+      isBreak = false;
+      
+    for (var i = 0; i < len; i++) {
+      msg = this._topicArr[i];
+      isLast = i === (len-1);
+      isBreak = callback.call(context, msg, isLast);
+      if (isBreak) { break; }
+    }
+  };
+
+
+  var SubscribersMap = {
+
+    WILDCARD: '*',
+    
+    HANDLERS_KEY: '~handlers',
+    
+    /*
+     * {
+     *   "*": Handlers,
+     *   "some": {
+     *     "*": Handlers,
+     *     "~handlers": Handlers,
+     *     "one": {
+     *       "*": Handlers,
+     *       "~handlers": Handlers,
+     *       "two": {}
+     *     },
+     *   }
+     * } 
+     */
+    _map: {},
+    
+    register: function (oTopic, oHandler) {
+      this._structureMap(oTopic);
+      var handlers = this._findHandlers(oTopic);
+      handlers.add(oHandler);
+    },
+    
+    _structureMap: function (oTopic) {
+      this._createRootWildcardHandlers();
+      
+      this._eachMsgMap(oTopic, function (msg, isLast, parentMap) {
+        parentMap[msg] = parentMap[msg] || this._createMap();
+      });
+    },
+    
+    _createRootWildcardHandlers: function () {
+      this._map[this.WILDCARD] = this._map[this.WILDCARD] || new Handlers();
+    },
     
     /**
-     * Subscribers map.
-     * @type {Object.<string, Object.<string, function>}
-     * @example If you subscribe 'some.one.*' and 'some.two',..
-     *     {
-     *       some: {
-     *         one: {
-     *           *: {
-     *             callbackId: callback
-     *           }
-     *         },
-     *         two: {
-     *           callbackId: callback
-     *         }
-     *       }
-     *     }
+     * iterate each msg map
+     * @param {Object} oTopic
+     * @param {function (msg, isLast, parentMap)} callback
+     *    {string} msg The message block.
+     *    {boolean} isLast Is last message?
+     *    {Object} parentMap The object that include the current message.
      */
-    SubscribersMap = {
-    
-      _WILDCARD: '*',
+    _eachMsgMap: function (oTopic, callback) {
+      var currentMap = this._map;
       
-      _SEPERATOR: '.',
-    
-      _CALLBACKS_KEY: ':callbacks',
+      oTopic.eachMsg(function (msg, isLast) {
       
-      _map: {},
-      
-      add: function (topic, callbackId, callbackObj) {
-        var topics = this._splitTopics(topic);
-        this._structureMap(topics);
-        this._getCallbacks(topics)[callbackId] = callbackObj;
-      },
-      
-      _splitTopics: function (topic) {
-        return topic.split(this._SEPERATOR);
-      },
-      
-      _structureMap: function (topics) {
-        var len = topics.length,
-          msgName,
-          currentMap = this._map;
-          
-        for (var i = 0; i < len; i++) {
-          msgName = topics[i];
-          currentMap[msgName] = currentMap[msgName] || this._createMap();
-          currentMap = currentMap[msgName];
-        }
-      },
-      
-      _createMap: function() {
-        var map = {};
-        map[this._WILDCARD] = {};
-        map[this._CALLBACKS_KEY] = {};
-        return map;
-      },
-      
-      _getCallbacks: function(topics) {
-        var len = topics.length,
-          msgName,
-          currentMap = this._map;
+        result = callback.call(this, msg, isLast, currentMap);
         
-        for (var i = 0; i < len; i++) {
-          msgName = topics[i];
-          currentMap = currentMap[msgName];
+        currentMap = currentMap[msg];
+        
+        if ( ! currentMap) {
+          return true; // break
         }
         
-        return currentMap[this._CALLBACKS_KEY];
-      },
-      
-      eachDepth: function (topic, callback) {
-        var parentMap = this._map,
-          topics = this._splitTopic(topic),
-          len = topics.length,
-          msgName,
-          isLastDepth,
-          currentMap;
-        
-        for (var i = 0; i < len; i++) {
-          msgName = topics[i];
-          isLastDepth = i === (len-1);
-          currentMap = parentMap[msgName];
-          
-          if ( ! currentMap) { break; }
-                
-          callback.call(this, msgName, currentMap, parentMap, isLastDepth); 
-          
-          parentMap = currentMap;
-        }      
-      },
-      
-      remove: function (topic, callbackId) {
-        var topics = this._splitTopics(topic),
-          callbacks = this._getCallbacks(topics);
-          
-        delete callbacks[callbackId];
-      },
-      
-      map: function () {
-        return this._map; 
-      },
-      
-      find: function (topic, callbackId) {
-        var topics = this._splitTopics(topic);
-        return this._getCallbacks(topics)[callbackId];
-      },
-      
-      reset: function () {
-        this._map = {}; 
-      }
-    
+      }, this);
     },
     
-    Callback = {
-      
-      create: function (func, context) {
-        return {
-          id: this.guid(),
-          func: func,
-          run: function (data) {
-            this.func.call(context || this, data);
+    _createMap: function () {
+      var map = {};
+      map[this.WILDCARD] = new Handlers();
+      map[this.HANDLERS_KEY] = new Handlers();
+      return map;
+    },
+    
+    _findHandlers: function (oTopic) {
+      var handlers = null;
+
+      this._eachMsgMap(oTopic, function (msg, isLast, parentMap) {
+        if (isLast) {
+          if (msg === this.WILDCARD) {
+            handlers = parentMap[this.WILDCARD];
+            
+          } else {
+            handlers = parentMap[msg][this.HANDLERS_KEY];
           }
-        };
-      },
+        }
+      });
       
-      guid : function () {
-        return 'p' + (Math.random() * (1 << 30)).toString(32).replace('.', ''); 
+      return handlers;
+    },
+    
+    runHandlers: function (oTopic, datas) {
+      this._eachMsgMap(oTopic, function (msg, isLast, parentMap) {
+        this._runWildcardHandlers(parentMap, datas);
+        this._runHandlersIfLastMsg(isLast, parentMap, msg, datas);  
+      });
+    },
+    
+    _runWildcardHandlers: function (parentMap, datas) {
+      this._runHandlers(parentMap[this.WILDCARD], datas);
+    },
+
+    _runHandlers: function (oHandlers, datas) {
+      if (oHandlers) {
+        oHandlers.runAll(datas); 
       }
+    },
+        
+    _runHandlersIfLastMsg: function (isLast, parentMap, msg, datas) {
+      if ( ! isLast) { return; }
       
-    };  
+      var oHandlers = parentMap[msg] && parentMap[msg][this.HANDLERS_KEY];
+      if (oHandlers) {
+        this._runHandlers(oHandlers, datas); 
+      }
+    },
+    
+    reset: function () {
+      this._map = {}; 
+    }
+    
+  };
+
+  
+  var Handlers = function () {
+    this._handlers = [];
+  };
+  Handlers.prototype.add = function (oHandler) {
+    this._handlers.push(oHandler);
+  };
+  Handlers.prototype.runAll = function (datas) {
+    var len = this._handlers.length,
+      handler = null;
+      
+    for (var i = 0; i < len; i++) {
+      handler = this._handlers[i];
+      handler.run(datas);
+    }
+  };
+
+
+  var Handler = function (handler, context) {
+    this._handler = handler;
+    this._context = context || this;
+  };
+  Handler.prototype.run = function (datas) {
+    this._handler.apply(this._context, datas);
+  };
   
   
-  // export 
   PingPong.SubscribersMap = SubscribersMap;
   window.PingPong = PingPong;
-
   
   
 }());

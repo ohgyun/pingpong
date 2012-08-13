@@ -25,55 +25,40 @@ function mockFunction() {
   return f;
 }
 
-function findCallback(topic, callbackId) {
-  var callbackObj = submap().find(topic, callbackId);
-  return callbackObj && callbackObj.func || undefined;
-}
-
 test('subscribe one depth message', function () {
   var callback = mockFunction();
+
+  pp().subscribe('msg', callback, this);
   
-  // subscribe() returns subscribed callback id
-  var callbackId = pp().subscribe('msg', callback);
+  pp().publish('msg');
   
-  equal(findCallback('msg', callbackId), callback,
-      'callback saved to subscribers map by callbackId');
+  equal(callback.called, 1);
 });
 
 test('subscribe two depth message', function () {  
   var callback = mockFunction();
-  var callbackId = pp().subscribe('some.msg', callback);
   
-  equal(findCallback('some.msg', callbackId), callback);
+  pp().subscribe('some.msg', callback);
+  
+  pp().publish('msg');
+  
+  equal(callback.called, undefined);
 });
 
 test('subscribe multiple messages', function () {
   // subscribe one
   var callbackOne = mockFunction();
-  var callbackOneId = pp().subscribe('some.one', callbackOne);
+  pp().subscribe('some.one', callbackOne);
   
   // subscribe two
   var callbackTwo = mockFunction();
-  var callbackTwoId = pp().subscribe('some.two', callbackTwo);
+  pp().subscribe('some.two', callbackTwo);
   
-  equal(findCallback('some.one', callbackOneId), callbackOne);
-  equal(findCallback('some.two', callbackTwoId), callbackTwo);
+  pp().publish('some.one');
+  
+  equal(callbackOne.called, 1);
+  equal(callbackTwo.called, undefined);
 });
-
-
-test('unsubscribe', function () {
-  var callback = mockFunction();
-  var callbackId = pp().subscribe('some.one', callback);
-  
-  equal(callback, submap().map()['some']['one'][callbackId]);
-  
-  // unsubscribe specific callback by id
-  pp().unsubscribe('some.one', callbackId);
-  
-  // TODO HERE!!!!
-  equal(findCallback('some.one', callbackId), undefined);
-});
-
 
 test('publish', function () {
   var callback = mockFunction();
@@ -107,3 +92,15 @@ test('subscribe all messages', function () {
   equal(callback.called, 3);
 });
 
+test('pub/sub with params', function () {
+  var a, b;
+  pp().subscribe('one.*', function (paramA, paramB) {
+    a = paramA;
+    b = paramB;
+  });
+  
+  pp().publish('one.two.three', 10, 20);
+  
+  equal(a, 10);
+  equal(b, 20);
+});
