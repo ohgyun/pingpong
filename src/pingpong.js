@@ -39,28 +39,28 @@
       subscribersMap.runHandlers(oTopic, datas);
     },
 
-		/**
-		 * Unsubscribe handler of topic.
-		 * @param {string} topic
-		 * @param {function} handler
-		 */
-		unsubscribe: function (topic, handler) {
-			var oTopic = new Topic(topic);
+    /**
+     * Unsubscribe handler of topic.
+     * @param {string} topic
+     * @param {function} handler
+     */
+    unsubscribe: function (topic, handler) {
+      var oTopic = new Topic(topic);
 
-			subscribersMap.remove(oTopic, handler);
-		},
+      subscribersMap.remove(oTopic, handler);
+    },
 
     ping: function () {
       this.publish.apply(this, arguments);
-		},
+    },
 
-		pong: function () {
+    pong: function () {
       this.subscribe.apply(this, arguments);
-		},
-		
-		pung: function () {
-			this.unsubscribe.apply(this, arguments);
-		}
+    },
+    
+    pung: function () {
+      this.unsubscribe.apply(this, arguments);
+    }
     
   };
   
@@ -214,12 +214,12 @@
       }
     },
     
-		remove: function (oTopic, handler) {
-			var oHandlers = this._findHandlers(oTopic);
-			if (oHandlers) {
-				oHandlers.remove(handler);
-			}
-		},
+    remove: function (oTopic, handler) {
+      var oHandlers = this._findHandlers(oTopic);
+      if (oHandlers) {
+        oHandlers.remove(handler);
+      }
+    },
 
     reset: function () {
       this._map = {}; 
@@ -235,31 +235,31 @@
     this._handlers.push(oHandler);
   };
   Handlers.prototype.runAll = function (datas) {
-		this.eachHandler(function (oHandler, idx) {
+    this.eachHandler(function (oHandler, idx) {
       oHandler.run(datas);
     });
   };
-	Handlers.prototype.eachHandler = function (callback) {
-		var len = this._handlers.length,
-			oHandler;
+  Handlers.prototype.eachHandler = function (callback) {
+    var len = this._handlers.length,
+      oHandler;
 
-		for (var i = 0; i < len; i++) {
-			oHandler = this._handlers[i];
-			callback.call(this, oHandler, i);
-		}
-	};
-	Handlers.prototype.remove = function (handler) {
-		var idxToRemove = -1;
+    for (var i = 0; i < len; i++) {
+      oHandler = this._handlers[i];
+      callback.call(this, oHandler, i);
+    }
+  };
+  Handlers.prototype.remove = function (handler) {
+    var idxToRemove = -1;
     this.eachHandler(function (oHandler, idx) {
       if (oHandler.isEqual(handler)) {
         idxToRemove = idx;
-			}
-		});
-		
-		if (idxToRemove > -1) {
+      }
+    });
+    
+    if (idxToRemove > -1) {
       this._handlers.splice(idxToRemove, 1);
-		}
-	};
+    }
+  };
 
 
   var Handler = function (topic, handler, context) {
@@ -271,9 +271,9 @@
     datas.push(this._topic);
     this._handler.apply(this._context, datas);
   };
-	Handler.prototype.isEqual = function (handler) {
+  Handler.prototype.isEqual = function (handler) {
     return this._handler === handler;
-	};
+  };
   
 
   var error = { 
@@ -288,6 +288,6 @@
   pingpong.subscribersMap = subscribersMap;
   window.pingpong = pingpong;
   
-	// TODO
-	// 1. change name msg to topicPiece
+  // TODO
+  // 1. change name msg to topicPiece
 }());
