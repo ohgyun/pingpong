@@ -1,23 +1,41 @@
 /**
- * PingPong - Javascript Messaging Library
+ * pingpong - Javascript Messaging Library
  * Copyright 2012 Ohgyun Ahn (ohgyun@gmail.com)
  * MIT Licensed
  */
 (function () {
   
   var pingpong = {
-    
+
+    version: '0.1-dev',
+
+		api: '',
+
+		/**
+		 * Subscribe topic.
+		 * @param {string} topic
+		 * @param {function ( .. , topicSent, topicReceived)} handler
+		 * @param {Object} context
+		 */
     subscribe: function (topic, handler, context) {
       var oTopic = new Topic(topic),
-        oHandler = new Handler(handler, context);
+        oHandler = new Handler(topic, handler, context);
         
       subscribersMap.register(oTopic, oHandler); 
     },
     
+		/**
+		 * Publish topic.
+		 * @param {string} topic
+		 * @param {Object..} datas
+		 */
     publish: function (topic) {
       var oTopic = new Topic(topic),
         datas = Array.prototype.slice.call(arguments, 1);
-        
+      
+			// Add topic sent info to datas
+		  datas.push(topic);
+
       subscribersMap.runHandlers(oTopic, datas);
     }
     
@@ -25,10 +43,27 @@
   
   
   var Topic = function (topic) {
-    var SEPERATOR = '.';
     this._topic = topic;
-    this._topicArr = topic.split(SEPERATOR);
+    this._topicArr = topic.split(Topic.SEPERATOR);
+
+		this.validate();
   };
+	
+	Topic.SEPERATOR = '.';
+	Topic.WILDCARD = '*';
+	Topic.VALIDATOR = /^\w+$/;
+	
+	Topic.prototype.validate = function () {
+		this.eachMsg(function (msg, isLast) {
+      if ( ! Topic.VALIDATOR.test(msg)) {
+				if (isLast && msg === Topic.WILDCARD) {
+          // Pass if last wildcard
+				} else {
+          error.throw('TOPIC');   
+				}
+		  };
+		});
+	};
   Topic.prototype.eachMsg = function (callback, context) {
     var len = this._topicArr.length,
       msg,
@@ -46,8 +81,6 @@
 
   var subscribersMap = {
 
-    WILDCARD: '*',
-    
     HANDLERS_KEY: '~handlers',
     
     /*
@@ -81,7 +114,7 @@
     },
     
     _createRootWildcardHandlers: function () {
-      this._map[this.WILDCARD] = this._map[this.WILDCARD] || new Handlers();
+      this._map[Topic.WILDCARD] = this._map[Topic.WILDCARD] || new Handlers();
     },
     
     /**
@@ -110,7 +143,7 @@
     
     _createMap: function () {
       var map = {};
-      map[this.WILDCARD] = new Handlers();
+      map[Topic.WILDCARD] = new Handlers();
       map[this.HANDLERS_KEY] = new Handlers();
       return map;
     },
@@ -120,8 +153,8 @@
 
       this._eachMsgMap(oTopic, function (msg, isLast, parentMap) {
         if (isLast) {
-          if (msg === this.WILDCARD) {
-            handlers = parentMap[this.WILDCARD];
+          if (msg === Topic.WILDCARD) {
+            handlers = parentMap[Topic.WILDCARD];
             
           } else {
             handlers = parentMap[msg][this.HANDLERS_KEY];
@@ -140,7 +173,7 @@
     },
     
     _runWildcardHandlers: function (parentMap, datas) {
-      this._runHandlers(parentMap[this.WILDCARD], datas);
+      this._runHandlers(parentMap[Topic.WILDCARD], datas);
     },
 
     _runHandlers: function (oHandlers, datas) {
@@ -182,16 +215,28 @@
   };
 
 
-  var Handler = function (handler, context) {
+  var Handler = function (topic, handler, context) {
+	  this._topic = topic;
     this._handler = handler;
     this._context = context || this;
   };
   Handler.prototype.run = function (datas) {
+	  datas.push(this._topic);
     this._handler.apply(this._context, datas);
   };
   
+
+	var error = { 
+	  throw: function (msgKey) {
+      throw '[pingpong] ' + this[msgKey];
+		},
+
+    TOPIC: 'Topic should be character'
+	};
   
+	// export
   pingpong.subscribersMap = subscribersMap;
+	pingpong.Topic = Topic;
   window.pingpong = pingpong;
   
   
