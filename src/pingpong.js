@@ -9,14 +9,14 @@
 
     version: '0.1-dev',
 
-		api: '',
+    api: '',
 
-		/**
-		 * Subscribe topic.
-		 * @param {string} topic
-		 * @param {function ( .. , topicSent, topicReceived)} handler
-		 * @param {Object} context
-		 */
+    /**
+     * Subscribe topic.
+     * @param {string} topic
+     * @param {function ( .. , topicSent, topicReceived)} handler
+     * @param {Object} context
+     */
     subscribe: function (topic, handler, context) {
       var oTopic = new Topic(topic),
         oHandler = new Handler(topic, handler, context);
@@ -24,17 +24,17 @@
       subscribersMap.register(oTopic, oHandler); 
     },
     
-		/**
-		 * Publish topic.
-		 * @param {string} topic
-		 * @param {Object..} datas
-		 */
+    /**
+     * Publish topic.
+     * @param {string} topic
+     * @param {Object..} datas
+     */
     publish: function (topic) {
       var oTopic = new Topic(topic),
         datas = Array.prototype.slice.call(arguments, 1);
       
-			// Add topic sent info to datas
-			datas.push(topic);
+      // Add topic sent info to datas
+      datas.push(topic);
 
       subscribersMap.runHandlers(oTopic, datas);
     }
@@ -46,24 +46,24 @@
     this._topic = topic;
     this._topicArr = topic.split(Topic.SEPERATOR);
 
-		this.validate();
+    this.validate();
   };
-	
-	Topic.SEPERATOR = '.';
-	Topic.WILDCARD = '*';
-	Topic.VALIDATOR = /^\w+$/;
-	
-	Topic.prototype.validate = function () {
-		this.eachMsg(function (msg, isLast) {
+  
+  Topic.SEPERATOR = '.';
+  Topic.WILDCARD = '*';
+  Topic.VALIDATOR = /^\w+$/;
+  
+  Topic.prototype.validate = function () {
+    this.eachMsg(function (msg, isLast) {
       if ( ! Topic.VALIDATOR.test(msg)) {
-				if (isLast && msg === Topic.WILDCARD) {
+        if (isLast && msg === Topic.WILDCARD) {
           // Pass if last wildcard
-				} else {
+        } else {
           error.throw('TOPIC');   
-				}
-			};
-		});
-	};
+        }
+      };
+    });
+  };
   Topic.prototype.eachMsg = function (callback, context) {
     var len = this._topicArr.length,
       msg,
@@ -216,27 +216,27 @@
 
 
   var Handler = function (topic, handler, context) {
-		this._topic = topic;
+    this._topic = topic;
     this._handler = handler;
     this._context = context || this;
   };
   Handler.prototype.run = function (datas) {
-		datas.push(this._topic);
+    datas.push(this._topic);
     this._handler.apply(this._context, datas);
   };
   
 
-	var error = { 
-		throw: function (msgKey) {
+  var error = { 
+    throw: function (msgKey) {
       throw '[pingpong] ' + this[msgKey];
-		},
+    },
 
     TOPIC: 'Topic should be character'
-	};
+  };
   
-	// export
+  // export
   pingpong.subscribersMap = subscribersMap;
-	pingpong.Topic = Topic;
+  pingpong.Topic = Topic;
   window.pingpong = pingpong;
   
   
