@@ -34,7 +34,7 @@
         datas = Array.prototype.slice.call(arguments, 1);
       
 			// Add topic sent info to datas
-		  datas.push(topic);
+			datas.push(topic);
 
       subscribersMap.runHandlers(oTopic, datas);
     }
@@ -61,7 +61,7 @@
 				} else {
           error.throw('TOPIC');   
 				}
-		  };
+			};
 		});
 	};
   Topic.prototype.eachMsg = function (callback, context) {
@@ -216,18 +216,18 @@
 
 
   var Handler = function (topic, handler, context) {
-	  this._topic = topic;
+		this._topic = topic;
     this._handler = handler;
     this._context = context || this;
   };
   Handler.prototype.run = function (datas) {
-	  datas.push(this._topic);
+		datas.push(this._topic);
     this._handler.apply(this._context, datas);
   };
   
 
 	var error = { 
-	  throw: function (msgKey) {
+		throw: function (msgKey) {
       throw '[pingpong] ' + this[msgKey];
 		},
 
