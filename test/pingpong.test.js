@@ -121,24 +121,55 @@ test('subscribe with topic param', function () {
   equal(c, '*');
 });
 
+test('unsubscribe handler', function () {
+	var callback = mockFunction();
+  pp().subscribe('some', callback);
 
-module('Topic'); 
+	pp().publish('some');
+	equal(callback.called, 1);
 
-function checkMsg(msg, expected) {
-  equal(pingpong.Topic.VALIDATOR.test(msg), expected);
+	pp().unsubscribe('some', callback);
+
+	pp().publish('some');
+	equal(callback.called, 1);
+});
+
+test('unsubscribe wildcard handler', function () {
+  var callback = mockFunction();
+	pp().subscribe('some.*', callback);
+
+	pp().publish('some.one');
+	equal(callback.called, 1);
+
+  pp().unsubscribe('some.*', callback);
+
+  pp().publish('some.one');
+	equal(callback.called, 1);
+});
+
+function checkTopicValidation(msg, expected) {
+  var success = true;
+  try {
+    pingpong.publish(msg);
+  } catch (e) {
+    success = false;
+	}
+	equal(success, expected);
 }
 
 test('valid topic', function () {
-  checkMsg('some', true);
-  checkMsg('someSome', true);
-  checkMsg('123some', true);
-  checkMsg('some_1234', true);
+  checkTopicValidation('some', true);
+  checkTopicValidation('someSome', true);
+  checkTopicValidation('123some', true);
+  checkTopicValidation('some_1234', true);
+	checkTopicValidation('abc.*', true);
 });
 
 test('invalid topic', function () {
-  checkMsg('', false);
-  checkMsg('.', false);
-  checkMsg('some-some', false);
-  checkMsg('*', false);
-  checkMsg(' ', false); 
+  checkTopicValidation('', false);
+  checkTopicValidation('.', false);
+  checkTopicValidation('some-some', false);
+  checkTopicValidation(' ', false); 
+	checkTopicValidation('some..', false);
+	checkTopicValidation('***', false);
 });

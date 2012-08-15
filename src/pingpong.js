@@ -59,7 +59,7 @@
 		},
 		
 		pung: function () {
-		  this.unsubscribe.apply(this, arguments);
+			this.unsubscribe.apply(this, arguments);
 		}
     
   };
@@ -235,7 +235,7 @@
     this._handlers.push(oHandler);
   };
   Handlers.prototype.runAll = function (datas) {
-	  this.eachHandler(function (oHandler, idx) {
+		this.eachHandler(function (oHandler, idx) {
       oHandler.run(datas);
     });
   };
@@ -249,7 +249,7 @@
 		}
 	};
 	Handlers.prototype.remove = function (handler) {
-	  var idxToRemove = -1;
+		var idxToRemove = -1;
     this.eachHandler(function (oHandler, idx) {
       if (oHandler.isEqual(handler)) {
         idxToRemove = idx;
