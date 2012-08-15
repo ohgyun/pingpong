@@ -104,3 +104,41 @@ test('pub/sub with params', function () {
   equal(a, 10);
   equal(b, 20);
 });
+
+test('subscribe with topic param', function () {
+  var a, b, c;
+  pp().subscribe('*', function (paramA, topicSent, topicReceived) {
+    a = paramA;
+		b = topicSent;
+		c = topicReceived;
+	});
+
+	pp().publish('one.two', 10);
+
+	equal(a, 10);
+	// Last two parameters contains topic information
+	equal(b, 'one.two');
+	equal(c, '*');
+});
+
+
+module('Topic'); 
+
+function checkMsg(msg, expected) {
+  equal(pingpong.Topic.VALIDATOR.test(msg), expected);
+}
+
+test('valid topic', function () {
+  checkMsg('some', true);
+	checkMsg('someSome', true);
+	checkMsg('123some', true);
+	checkMsg('some_1234', true);
+});
+
+test('invalid topic', function () {
+  checkMsg('', false);
+	checkMsg('.', false);
+	checkMsg('some-some', false);
+  checkMsg('*', false);
+  checkMsg(' ', false);	
+});
