@@ -7,7 +7,7 @@
   
   var pingpong = {
 
-    version: '0.1-dev',
+    version: '0.1',
 
     api: '',
 
@@ -60,43 +60,72 @@
     
     pung: function () {
       this.unsubscribe.apply(this, arguments);
+    },
+
+    namespace: function (namespace) {
+      return new Namespace(namespace);
     }
     
   };
   
   
+  var Namespace = function (namespace) {
+    this._namespace = namespace;
+  },
+  namespaceProto = Namespace.prototype;
+
+  for (var i in pingpong) {
+    if (pingpong.hasOwnProperty(i) &&
+        typeof pingpong[i] === 'function') {
+        
+      (function (method) {
+        namespaceProto[method] = function () {
+          var topic = arguments[0] || '',
+            namespacedTopic = this._namespace + Topic.SEPERATOR + topic,
+            args = Array.prototype.slice.call(arguments, 1);
+
+          args.unshift(namespacedTopic);
+
+          return pingpong[method].apply(pingpong, args);
+        }
+      }(i));
+
+    };
+  }
+
   var Topic = function (topic) {
     this._topic = topic;
-    this._topicArr = topic.split(Topic.SEPERATOR);
+    this._topicPieces = topic.split(Topic.SEPERATOR);
 
     this.validate();
-  };
+  },
+  topicProto = Topic.prototype;
   
   Topic.SEPERATOR = '.';
   Topic.WILDCARD = '*';
   Topic.VALIDATOR = /^\w+$/;
   
-  Topic.prototype.validate = function () {
-    this.eachMsg(function (msg, isLast) {
-      if ( ! Topic.VALIDATOR.test(msg)) {
-        if (isLast && msg === Topic.WILDCARD) {
+  topicProto.validate = function () {
+    this.eachTopicPiece(function (topicPiece, isLast) {
+      if ( ! Topic.VALIDATOR.test(topicPiece)) {
+        if (isLast && topicPiece === Topic.WILDCARD) {
           // Pass if last wildcard
         } else {
-          error.throw('TOPIC');   
+          error.throw('INVALID_TOPIC');   
         }
       };
     });
   };
-  Topic.prototype.eachMsg = function (callback, context) {
-    var len = this._topicArr.length,
-      msg,
+  topicProto.eachTopicPiece = function (callback, context) {
+    var len = this._topicPieces.length,
+      topicPiece,
       isLast,
       isBreak = false;
       
     for (var i = 0; i < len; i++) {
-      msg = this._topicArr[i];
+      topicPiece = this._topicPieces[i];
       isLast = i === (len-1);
-      isBreak = callback.call(context, msg, isLast);
+      isBreak = callback.call(context, topicPiece, isLast);
       if (isBreak) { break; }
     }
   };
@@ -131,8 +160,8 @@
     _structureMap: function (oTopic) {
       this._createRootWildcardHandlers();
       
-      this._eachMsgMap(oTopic, function (msg, isLast, parentMap) {
-        parentMap[msg] = parentMap[msg] || this._createMap();
+      this._eachTopicPieceMap(oTopic, function (topicPiece, isLast, parentMap) {
+        parentMap[topicPiece] = parentMap[topicPiece] || this._createMap();
       });
     },
     
@@ -143,19 +172,19 @@
     /**
      * Iterate each map of message
      * @param {Object} oTopic
-     * @param {function (msg, isLast, parentMap)} callback
-     *    {string} msg The message block.
+     * @param {function (topicPiece, isLast, parentMap)} callback
+     *    {string} topicPiece The message block.
      *    {boolean} isLast Is last message?
      *    {Object} parentMap The object that include the current message.
      */
-    _eachMsgMap: function (oTopic, callback) {
+    _eachTopicPieceMap: function (oTopic, callback) {
       var currentMap = this._map;
       
-      oTopic.eachMsg(function (msg, isLast) {
+      oTopic.eachTopicPiece(function (topicPiece, isLast) {
       
-        result = callback.call(this, msg, isLast, currentMap);
+        result = callback.call(this, topicPiece, isLast, currentMap);
         
-        currentMap = currentMap[msg];
+        currentMap = currentMap[topicPiece];
         
         if ( ! currentMap) {
           return true; // break
@@ -174,13 +203,13 @@
     _findHandlers: function (oTopic) {
       var handlers = null;
 
-      this._eachMsgMap(oTopic, function (msg, isLast, parentMap) {
+      this._eachTopicPieceMap(oTopic, function (topicPiece, isLast, parentMap) {
         if (isLast) {
-          if (msg === Topic.WILDCARD) {
+          if (topicPiece === Topic.WILDCARD) {
             handlers = parentMap[Topic.WILDCARD];
             
           } else {
-            handlers = parentMap[msg][this.HANDLERS_KEY];
+            handlers = parentMap[topicPiece][this.HANDLERS_KEY];
           }
         }
       });
@@ -189,9 +218,9 @@
     },
     
     runHandlers: function (oTopic, datas) {
-      this._eachMsgMap(oTopic, function (msg, isLast, parentMap) {
+      this._eachTopicPieceMap(oTopic, function (topicPiece, isLast, parentMap) {
         this._runWildcardHandlers(parentMap, datas);
-        this._runHandlersIfLastMsg(msg, isLast, parentMap, datas);  
+        this._runHandlersIfLastMsg(topicPiece, isLast, parentMap, datas);  
       });
     },
     
@@ -205,10 +234,10 @@
       }
     },
         
-    _runHandlersIfLastMsg: function (msg, isLast, parentMap, datas) {
+    _runHandlersIfLastMsg: function (topicPiece, isLast, parentMap, datas) {
       if ( ! isLast) { return; }
       
-      var oHandlers = parentMap[msg] && parentMap[msg][this.HANDLERS_KEY];
+      var oHandlers = parentMap[topicPiece] && parentMap[topicPiece][this.HANDLERS_KEY];
       if (oHandlers) {
         this._runHandlers(oHandlers, datas); 
       }
@@ -230,16 +259,18 @@
   
   var Handlers = function () {
     this._handlers = [];
-  };
-  Handlers.prototype.add = function (oHandler) {
+  },
+  handlersProto = Handlers.prototype;
+
+  handlersProto.add = function (oHandler) {
     this._handlers.push(oHandler);
   };
-  Handlers.prototype.runAll = function (datas) {
+  handlersProto.runAll = function (datas) {
     this.eachHandler(function (oHandler, idx) {
       oHandler.run(datas);
     });
   };
-  Handlers.prototype.eachHandler = function (callback) {
+  handlersProto.eachHandler = function (callback) {
     var len = this._handlers.length,
       oHandler;
 
@@ -248,7 +279,7 @@
       callback.call(this, oHandler, i);
     }
   };
-  Handlers.prototype.remove = function (handler) {
+  handlersProto.remove = function (handler) {
     var idxToRemove = -1;
     this.eachHandler(function (oHandler, idx) {
       if (oHandler.isEqual(handler)) {
@@ -266,28 +297,28 @@
     this._topic = topic;
     this._handler = handler;
     this._context = context || this;
-  };
-  Handler.prototype.run = function (datas) {
+  },
+  handlerProto = Handler.prototype;
+
+  handlerProto.run = function (datas) {
     datas.push(this._topic);
     this._handler.apply(this._context, datas);
   };
-  Handler.prototype.isEqual = function (handler) {
+  handlerProto.isEqual = function (handler) {
     return this._handler === handler;
   };
   
 
   var error = { 
-    throw: function (msgKey) {
-      throw '[pingpong] ' + this[msgKey];
+    throw: function (errorKey) {
+      throw '[pingpong] ' + this[errorKey];
     },
 
-    TOPIC: 'Topic should be character'
+    INVALID_TOPIC: 'Topic should be character'
   };
   
   // export
   pingpong.subscribersMap = subscribersMap;
   window.pingpong = pingpong;
   
-  // TODO
-  // 1. change name msg to topicPiece
 }());

@@ -173,3 +173,27 @@ test('invalid topic', function () {
   checkTopicValidation('some..', false);
   checkTopicValidation('***', false);
 });
+
+test('create namespace with topic', function () {
+  var p = pingpong.namespace('some');
+  var callback = mockFunction();
+  
+  p.subscribe('one', callback); // subscribe some.one
+
+  pp().publish('some.one');
+  p.publish('one');
+
+  equal(callback.called, 2);
+});
+
+test('create deeper namespace', function () {
+  var p = pingpong.namespace('ping');
+  var q = p.namespace('pong');
+  var callback = mockFunction();
+  
+  q.subscribe('one', callback);
+
+  pp().publish('ping.pong.one');
+
+  equal(callback.called, 1);
+});
