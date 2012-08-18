@@ -197,3 +197,10 @@ test('create deeper namespace', function () {
 
   equal(callback.called, 1);
 });
+
+test('create two namespace with same name', function () {
+  var p = pingpong.namespace('some');
+  var p2 = pingpong.namespace('some');
+  
+  equal(p, p2);
+});

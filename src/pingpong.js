@@ -3,8 +3,10 @@
  * Copyright 2012 Ohgyun Ahn (ohgyun@gmail.com)
  * MIT Licensed
  */
-(function () {
-  
+(function (glob) {
+
+  'use strict';
+
   var pingpong = {
 
     version: '0.1',
@@ -20,10 +22,10 @@
     subscribe: function (topic, handler, context) {
       var oTopic = new Topic(topic),
         oHandler = new Handler(topic, handler, context);
-        
+
       subscribersMap.register(oTopic, oHandler); 
     },
-    
+
     /**
      * Publish topic.
      * @param {string} topic
@@ -57,41 +59,55 @@
     pong: function () {
       this.subscribe.apply(this, arguments);
     },
-    
+
     pung: function () {
       this.unsubscribe.apply(this, arguments);
     },
 
     namespace: function (namespace) {
-      return new Namespace(namespace);
+      return Namespace.getInstance(namespace);
     }
-    
+
   };
-  
-  
+
+
   var Namespace = function (namespace) {
     this._namespace = namespace;
   },
   namespaceProto = Namespace.prototype;
 
-  for (var i in pingpong) {
-    if (pingpong.hasOwnProperty(i) &&
-        typeof pingpong[i] === 'function') {
-        
-      (function (method) {
-        namespaceProto[method] = function () {
-          var topic = arguments[0] || '',
-            namespacedTopic = this._namespace + Topic.SEPERATOR + topic,
-            args = Array.prototype.slice.call(arguments, 1);
+  Namespace._instances = {};
+  Namespace.getInstance = function (namespace) {
+    var ins = this._instances;
+    
+    ins[namespace] = ins[namespace] || new Namespace(namespace);
+    
+    return ins[namespace];
+  };
+  
+  (function defineNamespaceMethods() {
+    
+    for (var i in pingpong) {
+      if (pingpong.hasOwnProperty(i) &&
+          typeof pingpong[i] === 'function') {
+          
+        (function (method) {
+          namespaceProto[method] = function () {
+            var topic = arguments[0] || '',
+              namespacedTopic = this._namespace + Topic.SEPERATOR + topic,
+              args = Array.prototype.slice.call(arguments, 1);
+  
+            args.unshift(namespacedTopic);
+  
+            return pingpong[method].apply(pingpong, args);
+          }
+        }(i));
+  
+      };
+    }
+    
+  }());
 
-          args.unshift(namespacedTopic);
-
-          return pingpong[method].apply(pingpong, args);
-        }
-      }(i));
-
-    };
-  }
 
   var Topic = function (topic) {
     this._topic = topic;
@@ -111,7 +127,7 @@
         if (isLast && topicPiece === Topic.WILDCARD) {
           // Pass if last wildcard
         } else {
-          error.throw('INVALID_TOPIC');   
+          error.throwError('INVALID_TOPIC');   
         }
       };
     });
@@ -182,7 +198,7 @@
       
       oTopic.eachTopicPiece(function (topicPiece, isLast) {
       
-        result = callback.call(this, topicPiece, isLast, currentMap);
+        callback.call(this, topicPiece, isLast, currentMap);
         
         currentMap = currentMap[topicPiece];
         
@@ -310,15 +326,16 @@
   
 
   var error = { 
-    throw: function (errorKey) {
+    throwError: function (errorKey) {
       throw '[pingpong] ' + this[errorKey];
     },
 
     INVALID_TOPIC: 'Topic should be character'
   };
   
+  
   // export
   pingpong.subscribersMap = subscribersMap;
-  window.pingpong = pingpong;
+  glob.pingpong = pingpong;
   
-}());
+}(this));
