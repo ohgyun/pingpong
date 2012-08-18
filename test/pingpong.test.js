@@ -174,8 +174,8 @@ test('invalid topic', function () {
   checkTopicValidation('***', false);
 });
 
-test('create namespace with topic', function () {
-  var p = pingpong.namespace('some');
+test('create channel with topic', function () {
+  var p = pingpong.channel('some');
   var callback = mockFunction();
   
   p.subscribe('one', callback); // subscribe some.one
@@ -186,9 +186,9 @@ test('create namespace with topic', function () {
   equal(callback.called, 2);
 });
 
-test('create deeper namespace', function () {
-  var p = pingpong.namespace('ping');
-  var q = p.namespace('pong');
+test('create deeper channel', function () {
+  var p = pingpong.channel('ping');
+  var q = p.channel('pong');
   var callback = mockFunction();
   
   q.subscribe('one', callback);
@@ -198,9 +198,9 @@ test('create deeper namespace', function () {
   equal(callback.called, 1);
 });
 
-test('create two namespace with same name', function () {
-  var p = pingpong.namespace('some');
-  var p2 = pingpong.namespace('some');
+test('create two channel with same name', function () {
+  var p = pingpong.channel('some');
+  var p2 = pingpong.channel('some');
   
   equal(p, p2);
 });

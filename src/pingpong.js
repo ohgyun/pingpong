@@ -64,40 +64,40 @@
       this.unsubscribe.apply(this, arguments);
     },
 
-    namespace: function (namespace) {
-      return Namespace.getInstance(namespace);
+    channel: function (channel) {
+      return Channel.getInstance(channel);
     }
 
   };
 
 
-  var Namespace = function (namespace) {
-    this._namespace = namespace;
+  var Channel = function (channel) {
+    this._channel = channel;
   },
-  namespaceProto = Namespace.prototype;
+  channelProto = Channel.prototype;
 
-  Namespace._instances = {};
-  Namespace.getInstance = function (namespace) {
+  Channel._instances = {};
+  Channel.getInstance = function (channel) {
     var ins = this._instances;
     
-    ins[namespace] = ins[namespace] || new Namespace(namespace);
+    ins[channel] = ins[channel] || new Channel(channel);
     
-    return ins[namespace];
+    return ins[channel];
   };
   
-  (function defineNamespaceMethods() {
+  (function defineChannelMethods() {
     
     for (var i in pingpong) {
       if (pingpong.hasOwnProperty(i) &&
           typeof pingpong[i] === 'function') {
           
         (function (method) {
-          namespaceProto[method] = function () {
+          channelProto[method] = function () {
             var topic = arguments[0] || '',
-              namespacedTopic = this._namespace + Topic.SEPERATOR + topic,
+              channeldTopic = this._channel + Topic.SEPERATOR + topic,
               args = Array.prototype.slice.call(arguments, 1);
   
-            args.unshift(namespacedTopic);
+            args.unshift(channeldTopic);
   
             return pingpong[method].apply(pingpong, args);
           }
