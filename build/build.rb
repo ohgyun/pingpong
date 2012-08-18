@@ -37,7 +37,7 @@ end
 
 # Create output file with license phrase
 output_file_name = OUTPUT_FILE_PRE + version + OUTPUT_FILE_SUF
-output_file = File.open(output_file_name, 'w+')
+output_file = File.open(output_file_name, 'w')
 license_phrase.each { |line| output_file.puts(line) }
 
 
