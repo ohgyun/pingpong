@@ -1,8 +1,8 @@
-/**
- * pingpong - Javascript Messaging Library
- * Copyright 2012 Ohgyun Ahn (ohgyun@gmail.com)
- * MIT Licensed
- */
+//-----------------------------------------------------
+//- pingpong.js - Javascript Messaging Library
+//- Copyright 2012 Ohgyun Ahn (ohgyun@gmail.com)
+//- MIT Licensed
+//-----------------------------------------------------
 (function (glob) {
 
   'use strict';
