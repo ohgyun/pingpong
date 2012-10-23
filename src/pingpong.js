@@ -2,6 +2,8 @@
 //- pingpong.js - Javascript Messaging Library
 //- Copyright 2012 Ohgyun Ahn (ohgyun@gmail.com)
 //- MIT Licensed
+//-
+//- https://github.com/ohgyun/pingpong
 //-----------------------------------------------------
 (function (glob) {
 
@@ -10,8 +12,6 @@
   var pingpong = {
 
     version: '0.1',
-
-    api: '',
 
     /**
      * Subscribe topic.
@@ -334,8 +334,13 @@
   };
   
   
-  // export
+  // Expose pingpong to the global object 
   pingpong.subscribersMap = subscribersMap;
   glob.pingpong = pingpong;
   
+  // Expose pingpong as an AMD module 
+  if (typeof define === 'function' && define.amd) {
+    define('pingpong', pingpong);
+  }
+
 }(this));
