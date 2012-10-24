@@ -339,8 +339,12 @@
   glob.pingpong = pingpong;
   
   // Expose pingpong as an AMD module 
-  if (typeof define === 'function' && define.amd) {
-    define('pingpong', [], function () { return pingpong; });
-  }
+  if (typeof glob.define === 'function' && glob.define.amd) {
+    glob.define(function () { return pingpong; });
+ 
+  // Expose as a CommonJS module
+  } else if (typeof glob.module === 'object') {
+    glob.exports = pingpong;
+  } 
 
-}(this));
+ }(this));
