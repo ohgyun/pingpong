@@ -340,7 +340,7 @@
   
   // Expose pingpong as an AMD module 
   if (typeof define === 'function' && define.amd) {
-    define('pingpong', pingpong);
+    define('pingpong', [], function () { return pingpong; });
   }
 
 }(this));
